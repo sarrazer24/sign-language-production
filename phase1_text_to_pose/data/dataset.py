@@ -5,7 +5,7 @@ from transformers import T5Tokenizer
 
 # ── Constantes globales ──────────────────────────────────────────────────────
 N_KEYPOINTS = 151  # How2Sign : 133 corps + 2×21 mains (MediaPipe)
-BASE = '/kaggle/input/how2signdataset'
+BASE = '/kaggle/input/datasets/sarraverse/how2signdataset'
 
 class How2SignDataset(Dataset):
     def __init__(self, split='train', stats=None, max_frames=500):

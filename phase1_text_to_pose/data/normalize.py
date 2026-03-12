@@ -3,7 +3,7 @@ import torch
 
 # ── Constantes globales ──────────────────────────────────────────────────────
 N_KEYPOINTS = 151
-BASE = '/kaggle/input/how2signdataset'
+BASE = '/kaggle/input/datasets/sarraverse/how2signdataset'
 
 def compute_normalization_stats(n_keypoints, max_samples=5000):
     all_poses = []
