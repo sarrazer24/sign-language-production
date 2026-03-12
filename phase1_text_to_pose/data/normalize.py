@@ -1,4 +1,9 @@
+import numpy as np
 import torch
+
+# ── Constantes globales ──────────────────────────────────────────────────────
+N_KEYPOINTS = 151
+BASE = '/kaggle/input/datasets/sarraverse/how2signdataset'
 
 def compute_normalization_stats(n_keypoints, max_samples=5000):
     all_poses = []
@@ -21,13 +26,15 @@ def compute_normalization_stats(n_keypoints, max_samples=5000):
         'mean': torch.FloatTensor(mean),
         'std' : torch.FloatTensor(std)
     }
-    torch.save(stats, 'stats.pt')
+    save_path = '/kaggle/working/sign-language-production/phase1_text_to_pose/data/stats.pt'
+    torch.save(stats, save_path)
     print(f"✅ Stats calculées sur {all_poses.shape[0]:,} frames")
     print(f"   mean shape : {mean.shape}")
     print(f"   std  shape : {std.shape}")
     print(f"   mean global : {mean.mean():.4f}")
     print(f"   std  global : {std.mean():.4f}")
-    print(f"\n→ stats.pt sauvegardé")
+    print(f"\n→ stats.pt sauvegardé dans {save_path}")
     return stats
 
-stats = compute_normalization_stats(N_KEYPOINTS)
+if __name__ == '__main__':
+    stats = compute_normalization_stats(N_KEYPOINTS)
