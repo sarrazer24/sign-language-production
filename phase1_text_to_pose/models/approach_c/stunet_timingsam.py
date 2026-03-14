@@ -327,7 +327,7 @@ class MHMC(nn.Module):
     Kernel k_i = 2i + 1  → têtes avec k = 3, 5, 7 pour N=3
     (Algorithm 2 du papier, procédure MHMC)
     """
-    def __init__(self, channels: int, num_heads: int = 3):
+    def __init__(self, channels: int, num_heads: int = 4):
         super().__init__()
         assert channels % num_heads == 0, "channels doit être divisible par num_heads"
         self.num_heads   = num_heads
@@ -366,7 +366,7 @@ class SAA(nn.Module):
     - 1×1 LightWeight conv + 1×1 Conv par groupe
     - Retourne la carte d'attention Q de même shape que l'entrée
     """
-    def __init__(self, channels: int, num_heads: int = 3, num_groups: int = None):
+    def __init__(self, channels: int, num_heads: int = 4, num_groups: int = None):
         super().__init__()
         self.num_heads  = num_heads
         # M groupes = head_dim (chaque groupe regroupe 1 canal de chaque tête)
@@ -420,7 +420,7 @@ class VelocityGuidedTimingSAM(nn.Module):
 
     Algorithm 2 du papier (avec cette seule modification).
     """
-    def __init__(self, channels: int, num_heads: int = 3, dropout: float = 0.0):
+    def __init__(self, channels: int, num_heads: int = 4, dropout: float = 0.0):
         super().__init__()
         self.channels  = channels
         self.num_heads = num_heads
@@ -529,7 +529,7 @@ class STUNet(nn.Module):
         model_channels: int   = 512,
         cond_dim:       int   = 512,
         dropout:        float = 0.1,
-        num_heads:      int   = 3,
+        num_heads:      int   = 4,
         kernel_size:    int   = 3,
     ):
         super().__init__()
