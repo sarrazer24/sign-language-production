@@ -616,21 +616,18 @@ class STUNet(nn.Module):
         s2 = self.enc2_sam(h)           # skip_2 (B, 4C, T/4)
         # ── Decoder ─────────────────────────────────────────────────────
         # Resize s2 pour le skip si nécessaire (normalement même shape)
-        h = torch.cat([s2, s2], dim=1)            # (B, 8C, T/4)
-        h = h + self.dec2_cnn(h, z_c)
+        h = self.dec2_cnn(torch.cat([s2, s2], dim=1), z_c)
         h = self.dec2_sam(h)                      # (B, 2C, T/2)
 
         # Align T si le downsampling a créé un décalage d'1 frame
         if h.shape[-1] != s1.shape[-1]:
             h = F.interpolate(h, size=s1.shape[-1], mode='nearest')
-        h = torch.cat([h, s1], dim=1)             # (B, 4C, T/2)
-        h = h + self.dec1_cnn(h, z_c)
+        h = self.dec1_cnn(torch.cat([h, s1], dim=1), z_c)
         h = self.dec1_sam(h)                      # (B, C, T)
 
         if h.shape[-1] != s0.shape[-1]:
             h = F.interpolate(h, size=s0.shape[-1], mode='nearest')
-        h = torch.cat([h, s0], dim=1)             # (B, 2C, T)
-        h = h + self.dec0_cnn(h, z_c)             # (B, C, T)
+        h = self.dec0_cnn(torch.cat([h, s0], dim=1), z_c)             # (B, C, T)
 
         # ── Output projection ────────────────────────────────────────────
         h = F.silu(self.output_norm(h))
