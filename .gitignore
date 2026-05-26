@@ -1,9 +1,0 @@
-__pycache__/ 
-*.pyc 
-*.pyo 
-.ipynb_checkpoints/ 
-checkpoints/ 
-*.ckpt 
-*.log 
-*.pt 
-!phase1_text_to_pose/data/stats.pt
