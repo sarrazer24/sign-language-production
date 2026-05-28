@@ -1,12 +1,7 @@
 const router = require('express').Router();
-const auth   = require('../middleware/auth.middleware');
 const ctrl   = require('../controllers/activity.controller');
+const auth   = require('../middleware/auth.middleware');
 
-router.get('/notifications',          auth, ctrl.getNotifications);
-router.patch('/notifications/:id',    auth, ctrl.markAsRead);
-router.delete('/notifications',       auth, ctrl.clearAll);
-
-router.get('/history',                auth, ctrl.getHistory);
-router.post('/generate',              auth, ctrl.createGeneration);
+router.get('/', auth, ctrl.getRecentActivity);
 
 module.exports = router;

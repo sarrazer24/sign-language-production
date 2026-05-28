@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt    = require('jsonwebtoken');
 const db     = require('../config/db');
 
-// ── SIGN UP ──────────────────────────────
+// SIGN UP
 exports.signUp = async (req, res) => {
   const { full_name, email, password } = req.body;
   if (!full_name || !email || !password)
@@ -28,54 +28,39 @@ exports.signUp = async (req, res) => {
   }
 };
 
-// ── SIGN IN ──────────────────────────────
+// SIGN IN
 exports.signIn = async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password)
-    return res.status(400).json({ error: 'Email and password are required.' });
+    return res.status(400).json({ error: 'Email and password required.' });
 
   try {
     const result = await db.query('SELECT * FROM users WHERE email=$1', [email]);
-    const user   = result.rows[0];
-    if (!user) return res.status(404).json({ error: 'User not found.' });
+    if (result.rows.length === 0)
+      return res.status(404).json({ error: 'User not found.' });
 
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) return res.status(401).json({ error: 'Invalid password.' });
+    const user  = result.rows[0];
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(401).json({ error: 'Wrong password.' });
 
     const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRES_IN,
     });
-    res.json({
-      token,
-      user: { id: user.id, full_name: user.full_name, email: user.email },
-    });
+    res.json({ token, user: { id: user.id, full_name: user.full_name, email: user.email } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// ── FORGOT PASSWORD ───────────────────────
-exports.forgotPassword = async (req, res) => {
-  const { email } = req.body;
-  try {
-    const result = await db.query('SELECT id FROM users WHERE email=$1', [email]);
-    if (result.rows.length === 0)
-      return res.status(404).json({ error: 'No account with that email.' });
-
-    // TODO: send reset email (nodemailer / SendGrid)
-    res.json({ message: 'Reset link sent to ' + email });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// ── GET PROFILE ───────────────────────────
+// GET PROFILE
 exports.getProfile = async (req, res) => {
   try {
     const result = await db.query(
       'SELECT id, full_name, email, created_at FROM users WHERE id=$1',
       [req.user.id]
     );
+    if (result.rows.length === 0)
+      return res.status(404).json({ error: 'User not found.' });
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });

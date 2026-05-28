@@ -1,9 +1,9 @@
 const router = require('express').Router();
-const auth   = require('../middleware/auth.middleware');
 const ctrl   = require('../controllers/signs.controller');
+const auth   = require('../middleware/auth.middleware');
 
-router.get('/',        auth, ctrl.getSigns);
-router.get('/search',  auth, ctrl.searchSigns);
-router.get('/:id',     auth, ctrl.getSignById);
+router.get('/',     auth, ctrl.getSigns);
+router.get('/:id',  auth, ctrl.getSignById);
+router.post('/',    auth, ctrl.createSign);
 
 module.exports = router;
