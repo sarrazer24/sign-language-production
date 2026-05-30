@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:sign/screens/settings_screen.dart';
 import '../../../widgets/recent_activity_card.dart';
 import '../../../services/api_service.dart';
-
 import '../ai_studio_screen.dart';
+import '../sign_to_text_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -44,6 +44,137 @@ class _HomeScreenState extends State<HomeScreen> {
   String get _firstLetter =>
       userName.isNotEmpty ? userName[0].toUpperCase() : 'U';
 
+  void _showChoiceDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Color(0xFFF8F7FF),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Choose Mode',
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A1A2E))),
+            const SizedBox(height: 6),
+            const Text('What would you like to do?',
+                style: TextStyle(fontSize: 13, color: Colors.grey)),
+            const SizedBox(height: 24),
+
+            // Text to Sign
+            GestureDetector(
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const AiStudioScreen()));
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF7B6EF6), Color(0xFF5B4FCF)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                        color: const Color(0xFF5B4FCF).withOpacity(0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4))
+                  ],
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.text_fields_rounded,
+                        color: Colors.white, size: 28),
+                    SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Text to Sign',
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white)),
+                        SizedBox(height: 2),
+                        Text('Convert text into sign language video',
+                            style:
+                                TextStyle(fontSize: 12, color: Colors.white70)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 14),
+
+            // Sign to Text
+            GestureDetector(
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const SignToTextScreen()));
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                      color: const Color(0xFF5B4FCF), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2))
+                  ],
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.sign_language_rounded,
+                        color: Color(0xFF5B4FCF), size: 28),
+                    SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Sign to Text',
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1A1A2E))),
+                        SizedBox(height: 2),
+                        Text('Translate sign language to text',
+                            style:
+                                TextStyle(fontSize: 12, color: Colors.grey)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -59,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     const SizedBox(height: 24),
 
-                    // ── Header ──
+                    // Header
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -98,7 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     const SizedBox(height: 24),
 
-                    // ── AI Sign Language info card ──
+                    // AI Sign Language info card
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -144,12 +275,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     const SizedBox(height: 16),
 
-                    // ── Start Generating button ──
+                    // Start Generating button
                     GestureDetector(
-                      onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const AiStudioScreen())),
+                      onTap: () => _showChoiceDialog(context),
                       child: Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(
@@ -163,8 +291,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           borderRadius: BorderRadius.circular(18),
                           boxShadow: [
                             BoxShadow(
-                                color:
-                                    const Color(0xFF5B4FCF).withOpacity(0.35),
+                                color: const Color(0xFF5B4FCF).withOpacity(0.35),
                                 blurRadius: 16,
                                 offset: const Offset(0, 6))
                           ],
@@ -201,7 +328,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: const BoxDecoration(
-                                  color: Colors.white, shape: BoxShape.circle),
+                                  color: Colors.white,
+                                  shape: BoxShape.circle),
                               child: const Icon(Icons.arrow_forward_rounded,
                                   color: Color(0xFF5B4FCF), size: 20),
                             ),
@@ -212,7 +340,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     const SizedBox(height: 28),
 
-                    // ── Recent Activity ──
+                    // Recent Activity
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
