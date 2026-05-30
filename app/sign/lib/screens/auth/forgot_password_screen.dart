@@ -3,6 +3,7 @@ import '../../services/api_service.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/custom_button.dart';
 import 'sign_in_screen.dart';
+import 'reset_password_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -23,7 +24,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   void _sendResetLink() async {
     final email = _emailController.text.trim();
-
     if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter your email')),
@@ -35,22 +35,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     try {
       final result = await ApiService.forgotPassword(email: email);
-      final status = result['status'];
-      final data = result['data'];
-
       if (!mounted) return;
 
-      if (status == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Reset link sent! Check your email.'),
-            backgroundColor: Colors.green,
+      if (result['status'] == 200) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ResetPasswordScreen(email: email),
           ),
         );
       } else {
-        final message = data['message'] ?? 'Something went wrong';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(result['data']['error'] ?? 'Something went wrong'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } catch (e) {
@@ -74,76 +73,35 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 80),
-
-              // ── Title ──
-              const Text(
-                'Forgot Password?',
-                style: TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A2E),
-                ),
-                textAlign: TextAlign.center,
-              ),
-
+              const Text('Forgot Password?',
+                  style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A1A2E)),
+                  textAlign: TextAlign.center),
               const SizedBox(height: 16),
-
-              const Text(
-                "No worries! Enter your email and\nwe'll send you a reset link.",
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Colors.grey,
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
-
+              const Text("No worries! Enter your email and\nwe'll send you a reset link.",
+                  style: TextStyle(fontSize: 15, color: Colors.grey, height: 1.5),
+                  textAlign: TextAlign.center),
               const SizedBox(height: 48),
-
-              // ── Email ──
-              CustomTextField(
-                label: 'Email',
-                hintText: 'Enter your email',
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-              ),
-
+              CustomTextField(label: 'Email', hintText: 'Enter your email',
+                  controller: _emailController, keyboardType: TextInputType.emailAddress),
               const SizedBox(height: 28),
-
-              // ── Send Reset Link Button ──
-              CustomButton(
-                text: 'Send Reset Link',
-                onPressed: _sendResetLink,
-                isLoading: _isLoading,
-              ),
-
+              CustomButton(text: 'Send Reset Link', onPressed: _sendResetLink,
+                  isLoading: _isLoading),
               const SizedBox(height: 280),
-
-              // ── Back to Sign In ──
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
-                    'Remember your password? ',
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
+                  const Text('Remember your password? ',
+                      style: TextStyle(fontSize: 14, color: Colors.grey)),
                   GestureDetector(
-                    onTap: () => Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const SignInScreen()),
-                    ),
-                    child: const Text(
-                      'Sign In',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF5B4FCF),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    onTap: () => Navigator.pushReplacement(context,
+                        MaterialPageRoute(builder: (_) => const SignInScreen())),
+                    child: const Text('Sign In',
+                        style: TextStyle(fontSize: 14, color: Color(0xFF5B4FCF),
+                            fontWeight: FontWeight.w600)),
                   ),
                 ],
               ),
-
               const SizedBox(height: 32),
             ],
           ),

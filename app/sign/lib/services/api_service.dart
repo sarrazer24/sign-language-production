@@ -101,6 +101,18 @@ class ApiService {
       Uri.parse('$baseUrl/auth/forgot-password'),
       headers: await _headers(),
       body: jsonEncode({'email': email}),
+
+    );
+    return {'status': res.statusCode, 'data': jsonDecode(res.body)};
+  }
+  static Future<Map<String, dynamic>> resetPassword({
+    required String email,
+    required String newPassword,
+  }) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/auth/reset-password'),
+      headers: await _headers(),
+      body: jsonEncode({'email': email, 'new_password': newPassword}),
     );
     return {'status': res.statusCode, 'data': jsonDecode(res.body)};
   }

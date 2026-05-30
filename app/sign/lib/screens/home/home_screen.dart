@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:sign/screens/settings_screen.dart';
 import '../../../widgets/recent_activity_card.dart';
 import '../../../services/api_service.dart';
-import '../ai_studio_screen.dart';
 import '../sign_to_text_screen.dart';
+import '../text_to_sign_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -68,14 +68,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: TextStyle(fontSize: 13, color: Colors.grey)),
             const SizedBox(height: 24),
 
-            // Text to Sign
+            // ── Text to Sign ──
             GestureDetector(
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => const AiStudioScreen()));
+                        builder: (_) => const TextToSignScreen()));
               },
               child: Container(
                 width: double.infinity,
@@ -120,7 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const SizedBox(height: 14),
 
-            // Sign to Text
+            // ── Sign to Text ──
             GestureDetector(
               onTap: () {
                 Navigator.pop(context);
@@ -135,8 +135,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                      color: const Color(0xFF5B4FCF), width: 1.5),
+                  border:
+                      Border.all(color: const Color(0xFF5B4FCF), width: 1.5),
                   boxShadow: [
                     BoxShadow(
                         color: Colors.black.withOpacity(0.04),
@@ -190,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     const SizedBox(height: 24),
 
-                    // Header
+                    // ── Header ──
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -229,7 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     const SizedBox(height: 24),
 
-                    // AI Sign Language info card
+                    // ── AI Sign Language info card ──
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -275,7 +275,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     const SizedBox(height: 16),
 
-                    // Start Generating button
+                    // ── Start Generating button ──
                     GestureDetector(
                       onTap: () => _showChoiceDialog(context),
                       child: Container(
@@ -299,37 +299,34 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Row(
                           children: [
                             const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              child: Row(
                                 children: [
-                                  Row(children: [
-                                    Icon(Icons.auto_awesome,
-                                        color: Colors.white70, size: 16),
-                                    SizedBox(width: 12),
-                                    Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text('Start Generating',
-                                              style: TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.white)),
-                                          SizedBox(height: 4),
-                                          Text('Create your video',
-                                              style: TextStyle(
-                                                  fontSize: 13,
-                                                  color: Colors.white70)),
-                                        ]),
-                                  ]),
+                                  Icon(Icons.auto_awesome,
+                                      color: Colors.white70, size: 16),
+                                  SizedBox(width: 12),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Start Generating',
+                                          style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white)),
+                                      SizedBox(height: 4),
+                                      Text('Create your video',
+                                          style: TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.white70)),
+                                    ],
+                                  ),
                                 ],
                               ),
                             ),
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: const BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle),
+                                  color: Colors.white, shape: BoxShape.circle),
                               child: const Icon(Icons.arrow_forward_rounded,
                                   color: Color(0xFF5B4FCF), size: 20),
                             ),
@@ -340,7 +337,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     const SizedBox(height: 28),
 
-                    // Recent Activity
+                    // ── Recent Activity ──
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [

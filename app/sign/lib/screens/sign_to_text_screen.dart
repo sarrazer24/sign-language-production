@@ -205,8 +205,8 @@ class _SignToTextScreenState extends State<SignToTextScreen> {
                             borderRadius: BorderRadius.circular(18),
                             boxShadow: [
                               BoxShadow(
-                                  color: const Color(0xFF5B4FCF)
-                                      .withOpacity(0.35),
+                                  color:
+                                      const Color(0xFF5B4FCF).withOpacity(0.35),
                                   blurRadius: 16,
                                   offset: const Offset(0, 6))
                             ],
@@ -226,7 +226,6 @@ class _SignToTextScreenState extends State<SignToTextScreen> {
                           ),
                         ),
                       ),
-
                       if (_resultText.isNotEmpty) ...[
                         const SizedBox(height: 24),
                         Container(
@@ -251,7 +250,6 @@ class _SignToTextScreenState extends State<SignToTextScreen> {
                           ),
                         ),
                       ],
-
                       const SizedBox(height: 32),
                     ],
                   ),
