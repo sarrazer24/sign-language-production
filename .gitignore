@@ -7,3 +7,6 @@ checkpoints/
 *.log 
 *.pt 
 !phase1_text_to_pose/data/stats.pt
+node_modules/
+.env
+uploads/
