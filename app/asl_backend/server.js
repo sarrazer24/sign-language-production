@@ -7,6 +7,7 @@ const signsRoutes      = require('./routes/signs.routes');
 const activityRoutes   = require('./routes/activity.routes');
 const notifRoutes      = require('./routes/notifications.routes');
 const generationRoutes = require('./routes/generation.routes');
+const transcribeRoutes = require('./routes/asr');  // ← ADD THIS
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use('/api/signs',         signsRoutes);
 app.use('/api/activity',      activityRoutes);
 app.use('/api/notifications', notifRoutes);
 app.use('/api/generations',   generationRoutes);
+app.use('/api/transcribe',    transcribeRoutes);  // ← ADD THIS
 
 app.get('/', (req, res) => res.json({ status: 'ASL API running ✅' }));
 
