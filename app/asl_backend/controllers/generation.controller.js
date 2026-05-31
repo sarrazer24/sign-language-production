@@ -112,3 +112,21 @@ exports.rateGeneration = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+exports.analyzeVideo = async (req, res) => {
+  try {
+    // La vidéo sera traitée par le modèle IA de ta camarade
+    // Pour l'instant on sauvegarde juste la génération
+    const result = await db.query(
+      `INSERT INTO generations (user_id, original_text, status)
+       VALUES ($1, $2, 'processing') RETURNING *`,
+      [req.user.id, 'Video analysis']
+    );
+    res.json({ 
+      message: 'Video received',
+      generation: result.rows[0],
+      text: '' // sera rempli par le modèle IA
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

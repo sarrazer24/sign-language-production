@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/main_navigation.dart';
+import '../services/api_service.dart';
 import 'generated_video_screen.dart';
 
 class TextToSignScreen extends StatefulWidget {
@@ -16,6 +17,7 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
   final TextEditingController _textController = TextEditingController();
   bool _isRecording = false;
   bool _isProcessing = false;
+  String? _errorText;
 
   @override
   void dispose() {
@@ -29,6 +31,7 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
         _currentPage = 'home';
         _isRecording = false;
         _isProcessing = false;
+        _errorText = null;
         _textController.clear();
       });
     } else {
@@ -42,6 +45,8 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
 
   void _toggleRecording() {
     setState(() => _isRecording = !_isRecording);
+    // La voix reste simulée (pas d'endpoint STT dans l'API fournie)
+    // Si tu ajoutes un endpoint /speech-to-text, branche-le ici
     if (!_isRecording) {
       setState(() => _isProcessing = true);
       Future.delayed(const Duration(seconds: 2), () {
@@ -57,21 +62,39 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
     }
   }
 
-  void _translateToSign() {
+  // ✅ CORRECTION : vrai appel API au lieu de Future.delayed
+  Future<void> _translateToSign() async {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
-    setState(() => _isProcessing = true);
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() => _isProcessing = false);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => GeneratedVideoScreen(originalText: text),
-          ),
-        );
-      }
+
+    setState(() {
+      _isProcessing = true;
+      _errorText = null;
     });
+
+    final result = await ApiService.createGeneration(text);
+
+    if (!mounted) return;
+
+    setState(() => _isProcessing = false);
+
+    if (result['status'] == 201) {
+      //  Navigue vers GeneratedVideoScreen avec les données du backend
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => GeneratedVideoScreen(
+            originalText: text,
+            generationId: result['data']['id']?.toString(),
+            videoUrl: result['data']['video_url'],
+          ),
+        ),
+      );
+    } else {
+      setState(() {
+        _errorText = result['data']['message'] ?? 'Une erreur est survenue.';
+      });
+    }
   }
 
   // ─────────────────────────────────────────
@@ -282,7 +305,6 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               children: [
-                // Text field
                 Expanded(
                   child: Container(
                     width: double.infinity,
@@ -366,6 +388,32 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
                   ),
                 ),
 
+                // Message d'erreur
+                if (_errorText != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error_outline,
+                            color: Colors.red.shade400, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(_errorText!,
+                              style: TextStyle(
+                                  color: Colors.red.shade700, fontSize: 13)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
                 const SizedBox(height: 20),
 
                 // Translate button
@@ -436,7 +484,6 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               children: [
-                // Mic area
                 Expanded(
                   child: Container(
                     width: double.infinity,
@@ -454,25 +501,14 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Mic button with ripple effect
                         GestureDetector(
                           onTap: _toggleRecording,
                           child: Stack(
                             alignment: Alignment.center,
                             children: [
                               if (_isRecording) ...[
-                                _buildRipple(
-                                    140,
-                                    (_isRecording
-                                            ? Colors.red
-                                            : const Color(0xFF5B4FCF))
-                                        .withOpacity(0.08)),
-                                _buildRipple(
-                                    110,
-                                    (_isRecording
-                                            ? Colors.red
-                                            : const Color(0xFF5B4FCF))
-                                        .withOpacity(0.12)),
+                                _buildRipple(140, Colors.red.withOpacity(0.08)),
+                                _buildRipple(110, Colors.red.withOpacity(0.12)),
                               ],
                               Container(
                                 width: 88,
@@ -525,7 +561,6 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
                           style:
                               const TextStyle(fontSize: 13, color: Colors.grey),
                         ),
-
                         if (_isProcessing && !_isRecording) ...[
                           const SizedBox(height: 28),
                           const CircularProgressIndicator(
@@ -535,8 +570,6 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
                               style:
                                   TextStyle(fontSize: 13, color: Colors.grey)),
                         ],
-
-                        // Result text
                         if (!_isProcessing &&
                             !_isRecording &&
                             _textController.text.isNotEmpty) ...[
@@ -582,10 +615,7 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 20),
-
-                // Translate button
                 if (!_isRecording &&
                     !_isProcessing &&
                     _textController.text.isNotEmpty)
