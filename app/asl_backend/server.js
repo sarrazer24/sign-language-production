@@ -24,7 +24,12 @@ app.use('/api/activity',      activityRoutes);
 app.use('/api/notifications', notifRoutes);
 app.use('/api/generations',   generationRoutes);
 app.use('/api/transcribe',    transcribeRoutes);  // ← ADD THIS
-
+app.get('/api/test', (req, res) => {
+  res.json({
+    ok: true,
+    message: 'new deployment works'
+  });
+});
 app.get('/', (req, res) => res.json({ status: 'ASL API running ✅' }));
 
 const PORT = process.env.PORT || 3000;
