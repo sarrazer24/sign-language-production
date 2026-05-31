@@ -1,4 +1,9 @@
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:record/record.dart';
+import 'package:path_provider/path_provider.dart';
 import '../widgets/main_navigation.dart';
 import '../services/api_service.dart';
 import 'generated_video_screen.dart';
@@ -11,27 +16,32 @@ class TextToSignScreen extends StatefulWidget {
 }
 
 class _TextToSignScreenState extends State<TextToSignScreen> {
-  // 'home' | 'text' | 'voice'
-  String _currentPage = 'home';
+  String _currentPage = 'home'; // 'home' | 'text' | 'voice'
 
   final TextEditingController _textController = TextEditingController();
-  bool _isRecording = false;
-  bool _isProcessing = false;
+  bool    _isRecording  = false;
+  bool    _isProcessing = false;
   String? _errorText;
+
+  final AudioRecorder _recorder = AudioRecorder();
+
+  static const String _asrEndpoint =
+      'https://asl-backend-s59i.onrender.com/api/transcribe';
 
   @override
   void dispose() {
     _textController.dispose();
+    _recorder.dispose();
     super.dispose();
   }
 
   void _goBack() {
     if (_currentPage != 'home') {
       setState(() {
-        _currentPage = 'home';
-        _isRecording = false;
+        _currentPage  = 'home';
+        _isRecording  = false;
         _isProcessing = false;
-        _errorText = null;
+        _errorText    = null;
         _textController.clear();
       });
     } else {
@@ -43,33 +53,88 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
     }
   }
 
-  void _toggleRecording() {
-    setState(() => _isRecording = !_isRecording);
-    // La voix reste simulée (pas d'endpoint STT dans l'API fournie)
-    // Si tu ajoutes un endpoint /speech-to-text, branche-le ici
-    if (!_isRecording) {
-      setState(() => _isProcessing = true);
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
+  // ── REAL mic recording + Whisper API ──────────────────
+  Future<void> _toggleRecording() async {
+    if (_isRecording) {
+      final path = await _recorder.stop();
+      setState(() {
+        _isRecording  = false;
+        _isProcessing = true;
+        _errorText    = null;
+      });
+
+      if (path == null) {
+        setState(() {
+          _isProcessing = false;
+          _errorText    = 'Recording failed. Please try again.';
+        });
+        return;
+      }
+
+      try {
+        final file    = File(path);
+        final request = http.MultipartRequest('POST', Uri.parse(_asrEndpoint));
+        request.files.add(
+          await http.MultipartFile.fromPath('audio', file.path),
+        );
+
+        final streamed = await request.send()
+            .timeout(const Duration(seconds: 60));
+        final body = await http.Response.fromStream(streamed);
+
+        if (body.statusCode == 200) {
+          final json       = jsonDecode(body.body);
+          final transcript = json['transcript'] as String;
+          setState(() {
+            _textController.text = transcript;
+            _isProcessing        = false;
+          });
+        } else {
           setState(() {
             _isProcessing = false;
-            _textController.text = 'Hello, how are you?';
+            _errorText    = 'Server error ${body.statusCode}. Try again.';
           });
         }
-      });
+
+        if (await file.exists()) await file.delete();
+      } catch (e) {
+        setState(() {
+          _isProcessing = false;
+          _errorText    = 'Connection error. Check your internet.';
+        });
+      }
     } else {
-      _textController.clear();
+      final hasPermission = await _recorder.hasPermission();
+      if (!hasPermission) {
+        setState(() => _errorText = 'Microphone permission denied.');
+        return;
+      }
+
+      final dir  = await getTemporaryDirectory();
+      final path =
+          '${dir.path}/rec_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+      await _recorder.start(
+        const RecordConfig(encoder: AudioEncoder.aacLc),
+        path: path,
+      );
+
+      setState(() {
+        _isRecording  = true;
+        _errorText    = null;
+        _textController.clear();
+      });
     }
   }
 
-  // ✅ CORRECTION : vrai appel API au lieu de Future.delayed
+  // ── Real API call to generate sign video ──────────────
   Future<void> _translateToSign() async {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
 
     setState(() {
       _isProcessing = true;
-      _errorText = null;
+      _errorText    = null;
     });
 
     final result = await ApiService.createGeneration(text);
@@ -79,14 +144,14 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
     setState(() => _isProcessing = false);
 
     if (result['status'] == 201) {
-      //  Navigue vers GeneratedVideoScreen avec les données du backend
+      
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => GeneratedVideoScreen(
             originalText: text,
             generationId: result['data']['id']?.toString(),
-            videoUrl: result['data']['video_url'],
+            videoUrl:     result['data']['video_url'],
           ),
         ),
       );
@@ -97,9 +162,7 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
     }
   }
 
-  // ─────────────────────────────────────────
-  // HEADER commun
-  // ─────────────────────────────────────────
+
   Widget _buildHeader(String subtitle) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
@@ -140,9 +203,8 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
     );
   }
 
-  // ─────────────────────────────────────────
-  // PAGE HOME — choisir le mode
-  // ─────────────────────────────────────────
+
+
   Widget _buildHomePage() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,7 +216,7 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               children: [
-                // Type Text card
+
                 GestureDetector(
                   onTap: () => setState(() => _currentPage = 'text'),
                   child: Container(
@@ -221,7 +283,7 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
 
                 const SizedBox(height: 16),
 
-                // Voice card
+
                 GestureDetector(
                   onTap: () => setState(() => _currentPage = 'voice'),
                   child: Container(
@@ -291,9 +353,7 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
     );
   }
 
-  // ─────────────────────────────────────────
-  // PAGE TEXT
-  // ─────────────────────────────────────────
+
   Widget _buildTextPage() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -388,7 +448,7 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
                   ),
                 ),
 
-                // Message d'erreur
+
                 if (_errorText != null) ...[
                   const SizedBox(height: 12),
                   Container(
@@ -416,7 +476,7 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
 
                 const SizedBox(height: 20),
 
-                // Translate button
+
                 GestureDetector(
                   onTap: _isProcessing ? null : _translateToSign,
                   child: Container(
@@ -470,9 +530,7 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
     );
   }
 
-  // ─────────────────────────────────────────
-  // PAGE VOICE
-  // ─────────────────────────────────────────
+
   Widget _buildVoicePage() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -542,9 +600,7 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
                         ),
                         const SizedBox(height: 24),
                         Text(
-                          _isRecording
-                              ? 'Recording...'
-                              : 'Tap to start recording',
+                          _isRecording ? 'Recording...' : 'Tap to start recording',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -558,18 +614,31 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
                           _isRecording
                               ? 'Tap again to stop'
                               : 'Your voice will be converted to text',
-                          style:
-                              const TextStyle(fontSize: 13, color: Colors.grey),
+                          style: const TextStyle(fontSize: 13, color: Colors.grey),
                         ),
+
                         if (_isProcessing && !_isRecording) ...[
                           const SizedBox(height: 28),
                           const CircularProgressIndicator(
                               color: Color(0xFF5B4FCF)),
                           const SizedBox(height: 10),
                           const Text('Transcribing your voice...',
-                              style:
-                                  TextStyle(fontSize: 13, color: Colors.grey)),
+                              style: TextStyle(fontSize: 13, color: Colors.grey)),
                         ],
+
+                        if (_errorText != null) ...[
+                          const SizedBox(height: 16),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Text(
+                              _errorText!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                  fontSize: 13, color: Colors.red),
+                            ),
+                          ),
+                        ],
+
                         if (!_isProcessing &&
                             !_isRecording &&
                             _textController.text.isNotEmpty) ...[
@@ -615,7 +684,9 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 20),
+
                 if (!_isRecording &&
                     !_isProcessing &&
                     _textController.text.isNotEmpty)
