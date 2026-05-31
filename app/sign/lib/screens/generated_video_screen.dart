@@ -5,14 +5,14 @@ import '../services/api_service.dart';
 class GeneratedVideoScreen extends StatelessWidget {
   final String originalText;
   final String? generationId;
-  // ✅ AJOUT : URL de la vidéo générée par le backend
+  //  AJOUT : URL de la vidéo générée par le backend
   final String? videoUrl;
 
   const GeneratedVideoScreen({
     super.key,
     required this.originalText,
     this.generationId,
-    this.videoUrl, // ✅ reçu depuis TextToSignScreen
+    this.videoUrl, //  reçu depuis TextToSignScreen
   });
 
   @override
@@ -50,7 +50,7 @@ class GeneratedVideoScreen extends StatelessWidget {
                     color: const Color(0xFFE8E8E8),
                     borderRadius: BorderRadius.circular(18)),
                 child: videoUrl != null
-                    // ✅ Si on a une URL, on affiche un bouton "ouvrir la vidéo"
+                    //  Si on a une URL, on affiche un bouton "ouvrir la vidéo"
                     // (pour lire la vidéo tu peux intégrer video_player si besoin)
                     ? Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -208,7 +208,7 @@ class GeneratedVideoScreen extends StatelessWidget {
             CustomButton(
                 text: 'Submit',
                 onPressed: () async {
-                  // ✅ Ici tu peux appeler un endpoint de notation si disponible
+                  // Ici tu peux appeler un endpoint de notation si disponible
                   // Ex: await ApiService.rateGeneration(generationId, selectedStars);
                   if (context.mounted) Navigator.pop(context);
                 }),
