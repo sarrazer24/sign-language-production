@@ -6,7 +6,8 @@ import '../sign_to_text_screen.dart';
 import '../text_to_sign_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final VoidCallback? onStartGenerating;
+  const HomeScreen({super.key, this.onStartGenerating});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -58,6 +59,17 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE0E0E0),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
             const Text('Choose Mode',
                 style: TextStyle(
                     fontSize: 20,
@@ -159,8 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: Color(0xFF1A1A2E))),
                         SizedBox(height: 2),
                         Text('Translate sign language to text',
-                            style:
-                                TextStyle(fontSize: 12, color: Colors.grey)),
+                            style: TextStyle(fontSize: 12, color: Colors.grey)),
                       ],
                     ),
                   ],
@@ -291,7 +302,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           borderRadius: BorderRadius.circular(18),
                           boxShadow: [
                             BoxShadow(
-                                color: const Color(0xFF5B4FCF).withOpacity(0.35),
+                                color:
+                                    const Color(0xFF5B4FCF).withOpacity(0.35),
                                 blurRadius: 16,
                                 offset: const Offset(0, 6))
                           ],
@@ -338,16 +350,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 28),
 
                     // ── Recent Activity ──
-                    Row(
+                    const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('RECENT ACTIVITY',
+                        Text('RECENT ACTIVITY',
                             style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: Color(0xFF9E9E9E),
                                 letterSpacing: 1.0)),
-                        const Text('View all',
+                        Text('View all',
                             style: TextStyle(
                                 fontSize: 13,
                                 color: Color(0xFF5B4FCF),
