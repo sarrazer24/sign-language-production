@@ -1,18 +1,14 @@
 import 'package:flutter/material.dart';
 import '../widgets/custom_button.dart';
-import '../services/api_service.dart';
 
 class GeneratedVideoScreen extends StatelessWidget {
   final String originalText;
   final String? generationId;
-  //  AJOUT : URL de la vidéo générée par le backend
-  final String? videoUrl;
 
   const GeneratedVideoScreen({
     super.key,
     required this.originalText,
     this.generationId,
-    this.videoUrl, //  reçu depuis TextToSignScreen
   });
 
   @override
@@ -39,8 +35,6 @@ class GeneratedVideoScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-
-            // Zone vidéo
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
@@ -49,32 +43,13 @@ class GeneratedVideoScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                     color: const Color(0xFFE8E8E8),
                     borderRadius: BorderRadius.circular(18)),
-                child: videoUrl != null
-                    //  Si on a une URL, on affiche un bouton "ouvrir la vidéo"
-                    // (pour lire la vidéo tu peux intégrer video_player si besoin)
-                    ? Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.play_circle_filled_rounded,
-                              size: 56, color: Color(0xFF5B4FCF)),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Vidéo prête',
-                            style: TextStyle(
-                                color: Colors.grey.shade600, fontSize: 13),
-                          ),
-                        ],
-                      )
-                    : const Center(
-                        child: Icon(Icons.play_circle_outline_rounded,
-                            size: 56, color: Color(0xFFBBBBBB)),
-                      ),
+                child: const Center(
+                  child: Icon(Icons.play_circle_outline_rounded,
+                      size: 56, color: Color(0xFFBBBBBB)),
+                ),
               ),
             ),
-
             const SizedBox(height: 20),
-
-            // Texte original
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
@@ -86,7 +61,7 @@ class GeneratedVideoScreen extends StatelessWidget {
                   border: Border.all(color: const Color(0xFFF0EFF8)),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
+                        color: Colors.black.withValues(alpha: 0.04),
                         blurRadius: 8,
                         offset: const Offset(0, 2))
                   ],
@@ -105,10 +80,7 @@ class GeneratedVideoScreen extends StatelessWidget {
                     ]),
               ),
             ),
-
             const SizedBox(height: 20),
-
-            // Actions
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(children: [
@@ -124,9 +96,7 @@ class GeneratedVideoScreen extends StatelessWidget {
                     icon: Icons.share_outlined, label: 'Share', onTap: () {}),
               ]),
             ),
-
             const SizedBox(height: 24),
-
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: CustomButton(
@@ -208,8 +178,6 @@ class GeneratedVideoScreen extends StatelessWidget {
             CustomButton(
                 text: 'Submit',
                 onPressed: () async {
-                  // Ici tu peux appeler un endpoint de notation si disponible
-                  // Ex: await ApiService.rateGeneration(generationId, selectedStars);
                   if (context.mounted) Navigator.pop(context);
                 }),
             const SizedBox(height: 12),
@@ -240,7 +208,7 @@ class _ActionButton extends StatelessWidget {
             border: Border.all(color: const Color(0xFFF0EFF8)),
             boxShadow: [
               BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withValues(alpha: 0.04),
                   blurRadius: 6,
                   offset: const Offset(0, 2))
             ],

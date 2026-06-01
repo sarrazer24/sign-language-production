@@ -8,3 +8,10 @@ pyyaml
 tqdm 
 torchcfm 
 einops
+gunicorn
+flask
+flask-cors
+ultralytics
+opencv-python-headless
+numpy
+Pillow

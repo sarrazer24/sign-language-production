@@ -6,8 +6,7 @@ import '../sign_to_text_screen.dart';
 import '../text_to_sign_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  final VoidCallback? onStartGenerating;
-  const HomeScreen({super.key, this.onStartGenerating});
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -59,17 +58,6 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE0E0E0),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
             const Text('Choose Mode',
                 style: TextStyle(
                     fontSize: 20,
@@ -101,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                        color: const Color(0xFF5B4FCF).withOpacity(0.3),
+                        color: const Color(0xFF5B4FCF).withValues(alpha: 0.3),
                         blurRadius: 12,
                         offset: const Offset(0, 4))
                   ],
@@ -151,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Border.all(color: const Color(0xFF5B4FCF), width: 1.5),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
+                        color: Colors.black.withValues(alpha: 0.04),
                         blurRadius: 8,
                         offset: const Offset(0, 2))
                   ],
@@ -249,7 +237,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         border: Border.all(color: const Color(0xFF5B4FCF)),
                         boxShadow: [
                           BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
+                              color: Colors.black.withValues(alpha: 0.04),
                               blurRadius: 8,
                               offset: const Offset(0, 2))
                         ],
@@ -302,8 +290,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           borderRadius: BorderRadius.circular(18),
                           boxShadow: [
                             BoxShadow(
-                                color:
-                                    const Color(0xFF5B4FCF).withOpacity(0.35),
+                                color: const Color(0xFF5B4FCF)
+                                    .withValues(alpha: 0.35),
                                 blurRadius: 16,
                                 offset: const Offset(0, 6))
                           ],
@@ -326,7 +314,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                               fontWeight: FontWeight.bold,
                                               color: Colors.white)),
                                       SizedBox(height: 4),
-                                      Text('Create your video',
+                                      Text(
+                                          'Create your video or translate signs',
                                           style: TextStyle(
                                               fontSize: 13,
                                               color: Colors.white70)),

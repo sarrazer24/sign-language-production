@@ -32,7 +32,7 @@ class SplashSlide extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF5B4FCF).withOpacity(0.25),
+                  color: const Color(0xFF5B4FCF).withValues(alpha: 0.25),
                   blurRadius: 24,
                   offset: const Offset(0, 8),
                 ),
