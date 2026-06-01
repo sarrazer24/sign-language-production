@@ -24,7 +24,7 @@ app.use('/api/activity',      activityRoutes);
 app.use('/api/notifications', notifRoutes);
 app.use('/api/generations',   generationRoutes);
 app.use('/api/transcribe',    transcribeRoutes);  // ← ADD THIS
-app.use('/api/analyze-video', transcribeRoutes);
+
 app.get('/api/test', (req, res) => {
   res.json({
     ok: true,
