@@ -52,29 +52,3 @@ exports.createSign = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-// ─────────────────────────────────────────────
-// 🔥 ML GENERATION (NEW)
-// ─────────────────────────────────────────────
-exports.generateSign = async (req, res) => {
-  const { text, n_frames = 60, guidance_scale = 3.0 } = req.body;
-
-  if (!text || !text.trim()) {
-    return res.status(400).json({ error: 'text is required' });
-  }
-
-  try {
-    const { data } = await axios.post(
-      `${ML_URL}/generate`,
-      { text, n_frames, guidance_scale },
-      { timeout: 60000 }
-    );
-
-    return res.json(data);
-
-  } catch (err) {
-    const detail = err.response?.data?.detail || err.message;
-    return res.status(502).json({
-      error: `ML service error: ${detail}`
-    });
-  }
-};

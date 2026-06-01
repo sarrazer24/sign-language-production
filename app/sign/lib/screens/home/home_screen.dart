@@ -159,8 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: Color(0xFF1A1A2E))),
                         SizedBox(height: 2),
                         Text('Translate sign language to text',
-                            style:
-                                TextStyle(fontSize: 12, color: Colors.grey)),
+                            style: TextStyle(fontSize: 12, color: Colors.grey)),
                       ],
                     ),
                   ],
@@ -291,7 +290,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           borderRadius: BorderRadius.circular(18),
                           boxShadow: [
                             BoxShadow(
-                                color: const Color(0xFF5B4FCF).withValues(alpha: 0.35),
+                                color: const Color(0xFF5B4FCF)
+                                    .withValues(alpha: 0.35),
                                 blurRadius: 16,
                                 offset: const Offset(0, 6))
                           ],
@@ -314,7 +314,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                               fontWeight: FontWeight.bold,
                                               color: Colors.white)),
                                       SizedBox(height: 4),
-                                      Text('Create your video or translate signs',
+                                      Text(
+                                          'Create your video or translate signs',
                                           style: TextStyle(
                                               fontSize: 13,
                                               color: Colors.white70)),

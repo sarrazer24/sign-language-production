@@ -146,7 +146,8 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
                       borderRadius: BorderRadius.circular(22),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF5B4FCF).withValues(alpha: 0.35),
+                          color:
+                              const Color(0xFF5B4FCF).withValues(alpha: 0.35),
                           blurRadius: 20,
                           offset: const Offset(0, 8),
                         )
@@ -383,7 +384,8 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
                       borderRadius: BorderRadius.circular(18),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF5B4FCF).withValues(alpha: 0.35),
+                          color:
+                              const Color(0xFF5B4FCF).withValues(alpha: 0.35),
                           blurRadius: 16,
                           offset: const Offset(0, 6),
                         )
@@ -603,7 +605,8 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
                         borderRadius: BorderRadius.circular(18),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF5B4FCF).withValues(alpha: 0.35),
+                            color:
+                                const Color(0xFF5B4FCF).withValues(alpha: 0.35),
                             blurRadius: 16,
                             offset: const Offset(0, 6),
                           )

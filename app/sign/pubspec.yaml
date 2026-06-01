@@ -8,19 +8,24 @@ environment:
   sdk: '>=3.1.0 <4.0.0'
 
 dependencies:
+  permission_handler: ^11.0.0
   flutter:
     sdk: flutter
+
   cupertino_icons: ^1.0.2
   http: ^1.2.0
-  web: ^0.5.1
+  web: ^1.1.1
   shared_preferences: ^2.2.3
   camera: ^0.10.5+9
+
+  file_picker: ^8.0.0
+  record: ^7.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.0
-
+  path_provider: ^2.1.2
 flutter:
   uses-material-design: true
   assets:

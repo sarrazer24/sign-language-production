@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sign/screens/home/home_screen.dart';
 import '../../widgets/activity_card.dart';
+import '../../services/api_service.dart';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
@@ -33,13 +34,16 @@ class _ActivityScreenState extends State<ActivityScreen>
   bool get _hasUnread => _items.any((i) => i.isUnread);
 
   // ════════════════════════════════
-  // LOAD DATA — temporaire sans API
+  // LOAD DATA — vrais appels API ✅
   // ════════════════════════════════
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final notifRaw = <dynamic>[];
-      final historyRaw = <dynamic>[];
+      // ✅ Appel API notifications
+      final notifRaw = await ApiService.getNotifications();
+
+      // ✅ Appel API historique des générations
+      final historyRaw = await ApiService.getMyGenerations();
 
       final notifications = notifRaw.map<ActivityItem>((n) {
         return ActivityItem(
@@ -121,7 +125,9 @@ class _ActivityScreenState extends State<ActivityScreen>
     setState(() => _items.removeWhere((i) => i.id == id));
   }
 
-  void _clearNotifications() {
+  void _clearNotifications() async {
+    // ✅ Appel API pour vider les notifications côté backend
+    await ApiService.clearNotifications();
     setState(
         () => _items.removeWhere((i) => i.type == ActivityType.notification));
   }
@@ -273,31 +279,36 @@ class _ActivityScreenState extends State<ActivityScreen>
                         color: Color(0xFF5B4FCF),
                       ),
                     )
-                  : AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      child: _currentList.isEmpty
-                          ? _EmptyState(isNotifTab: _isNotifTab)
-                          : ListView.builder(
-                              key: ValueKey(
-                                  '${_tabController.index}_${_currentList.length}'),
-                              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                              itemCount: _currentList.length,
-                              itemBuilder: (context, index) {
-                                final item = _currentList[index];
-                                return ActivityCard(
-                                  item: item,
-                                  onTap: () {
-                                    _markAsRead(item.id);
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) => const HomeScreen(),
-                                      ),
-                                    );
-                                  },
-                                  onDismiss: () => _deleteItem(item.id),
-                                );
-                              },
-                            ),
+                  : RefreshIndicator(
+                      color: const Color(0xFF5B4FCF),
+                      onRefresh: _loadData, // ✅ Pull to refresh
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: _currentList.isEmpty
+                            ? _EmptyState(isNotifTab: _isNotifTab)
+                            : ListView.builder(
+                                key: ValueKey(
+                                    '${_tabController.index}_${_currentList.length}'),
+                                padding:
+                                    const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                                itemCount: _currentList.length,
+                                itemBuilder: (context, index) {
+                                  final item = _currentList[index];
+                                  return ActivityCard(
+                                    item: item,
+                                    onTap: () {
+                                      _markAsRead(item.id);
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => const HomeScreen(),
+                                        ),
+                                      );
+                                    },
+                                    onDismiss: () => _deleteItem(item.id),
+                                  );
+                                },
+                              ),
+                      ),
                     ),
             ),
           ],
