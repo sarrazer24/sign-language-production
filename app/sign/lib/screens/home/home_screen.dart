@@ -89,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                        color: const Color(0xFF5B4FCF).withOpacity(0.3),
+                        color: const Color(0xFF5B4FCF).withValues(alpha: 0.3),
                         blurRadius: 12,
                         offset: const Offset(0, 4))
                   ],
@@ -139,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Border.all(color: const Color(0xFF5B4FCF), width: 1.5),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
+                        color: Colors.black.withValues(alpha: 0.04),
                         blurRadius: 8,
                         offset: const Offset(0, 2))
                   ],
@@ -238,7 +238,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         border: Border.all(color: const Color(0xFF5B4FCF)),
                         boxShadow: [
                           BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
+                              color: Colors.black.withValues(alpha: 0.04),
                               blurRadius: 8,
                               offset: const Offset(0, 2))
                         ],
@@ -291,7 +291,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           borderRadius: BorderRadius.circular(18),
                           boxShadow: [
                             BoxShadow(
-                                color: const Color(0xFF5B4FCF).withOpacity(0.35),
+                                color: const Color(0xFF5B4FCF).withValues(alpha: 0.35),
                                 blurRadius: 16,
                                 offset: const Offset(0, 6))
                           ],
@@ -314,7 +314,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               fontWeight: FontWeight.bold,
                                               color: Colors.white)),
                                       SizedBox(height: 4),
-                                      Text('Create your video',
+                                      Text('Create your video or translate signs',
                                           style: TextStyle(
                                               fontSize: 13,
                                               color: Colors.white70)),
@@ -338,16 +338,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 28),
 
                     // ── Recent Activity ──
-                    Row(
+                    const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('RECENT ACTIVITY',
+                        Text('RECENT ACTIVITY',
                             style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: Color(0xFF9E9E9E),
                                 letterSpacing: 1.0)),
-                        const Text('View all',
+                        Text('View all',
                             style: TextStyle(
                                 fontSize: 13,
                                 color: Color(0xFF5B4FCF),

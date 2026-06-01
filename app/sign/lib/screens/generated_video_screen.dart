@@ -55,7 +55,7 @@ class GeneratedVideoScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white, borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: const Color(0xFFF0EFF8)),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
                       blurRadius: 8, offset: const Offset(0, 2))],
                 ),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -168,7 +168,7 @@ class _ActionButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white, borderRadius: BorderRadius.circular(14),
             border: Border.all(color: const Color(0xFFF0EFF8)),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 6, offset: const Offset(0, 2))],
           ),
           child: Column(children: [

@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:sign/screens/activity_screen.dart';
-import 'package:sign/screens/home/home_screen.dart';
-import 'package:sign/widgets/main_navigation.dart';
 import 'screens/splash/splash_screen.dart';
 
 void main() {
