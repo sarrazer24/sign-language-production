@@ -1,33 +1,42 @@
-const db = require('../config/db');
+const db   = require('../config/db');
+const axios = require('axios');
 
-// CREATE GENERATION (soumettre un texte)
+const ML_URL = process.env.ML_SERVICE_URL || 'https://tawes-signlanguageapi.hf.space';
+
+// CREATE GENERATION
 exports.createGeneration = async (req, res) => {
   const { original_text } = req.body;
   if (!original_text)
     return res.status(400).json({ error: 'original_text is required.' });
 
   try {
+    const { data } = await axios.post(`${ML_URL}/generate`, {
+      text: original_text,
+      n_frames: 60,
+      guidance_scale: 3.0,
+    });
+
     const result = await db.query(
       `INSERT INTO generations (user_id, original_text, status)
-       VALUES ($1, $2, 'pending') RETURNING *`,
+       VALUES ($1, $2, 'ready') RETURNING *`,
       [req.user.id, original_text]
     );
     const generation = result.rows[0];
 
-    // Créer une notification automatique
+    
     await db.query(
       `INSERT INTO notifications (user_id, type, title, message, generation_id)
-       VALUES ($1, 'info', 'Processing...', $2, $3)`,
-      [req.user.id, `Your video for "${original_text}" is being generated.`, generation.id]
+       VALUES ($1, 'video_ready', 'Ready', $2, $3)`,
+      [req.user.id, `Your sign language for "${original_text}" is ready.`, generation.id]
     );
 
-    res.status(201).json(generation);
+    res.status(201).json({ ...generation, openpose: data.openpose });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// GET ALL GENERATIONS (historique de l'user)
+// GET ALL GENERATIONS
 exports.getMyGenerations = async (req, res) => {
   try {
     const result = await db.query(
@@ -55,7 +64,7 @@ exports.getGenerationById = async (req, res) => {
   }
 };
 
-// UPDATE STATUS (appelé par le service IA)
+// UPDATE STATUS
 exports.updateStatus = async (req, res) => {
   const { status, video_url } = req.body;
   const allowed = ['pending', 'processing', 'ready', 'failed'];
@@ -69,25 +78,7 @@ exports.updateStatus = async (req, res) => {
     );
     if (result.rows.length === 0)
       return res.status(404).json({ error: 'Generation not found.' });
-
-    const gen = result.rows[0];
-
-    // Notification automatique selon le statut
-    if (status === 'ready') {
-      await db.query(
-        `INSERT INTO notifications (user_id, type, title, message, generation_id)
-         VALUES ($1, 'video_ready', 'Video Ready', $2, $3)`,
-        [gen.user_id, `Your sign language video for "${gen.original_text}" is ready to view.`, gen.id]
-      );
-    } else if (status === 'failed') {
-      await db.query(
-        `INSERT INTO notifications (user_id, type, title, message, generation_id)
-         VALUES ($1, 'generation_failed', 'Generation Failed', $2, $3)`,
-        [gen.user_id, `We couldn't process your request for "${gen.original_text}". Please try again.`, gen.id]
-      );
-    }
-
-    res.json(gen);
+    res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -112,20 +103,11 @@ exports.rateGeneration = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// ANALYZE VIDEO (sign to text - placeholder)
 exports.analyzeVideo = async (req, res) => {
   try {
-    // La vidéo sera traitée par le modèle IA de ta camarade
-    // Pour l'instant on sauvegarde juste la génération
-    const result = await db.query(
-      `INSERT INTO generations (user_id, original_text, status)
-       VALUES ($1, $2, 'processing') RETURNING *`,
-      [req.user.id, 'Video analysis']
-    );
-    res.json({ 
-      message: 'Video received',
-      generation: result.rows[0],
-      text: '' // sera rempli par le modèle IA
-    });
+    res.json({ text: 'Sign language model not connected yet.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

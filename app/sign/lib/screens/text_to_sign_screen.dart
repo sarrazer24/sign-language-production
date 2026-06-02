@@ -1,9 +1,10 @@
-import 'dart:io';
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:record/record.dart';
-import 'package:path_provider/path_provider.dart';
+
+import 'web_audio_helper.dart' if (dart.library.io) 'stub_audio_helper.dart';
 import '../widgets/main_navigation.dart';
 import '../services/api_service.dart';
 import 'generated_video_screen.dart';
@@ -16,7 +17,7 @@ class TextToSignScreen extends StatefulWidget {
 }
 
 class _TextToSignScreenState extends State<TextToSignScreen> {
-  String _currentPage = 'home'; // 'home' | 'text' | 'voice'
+  String _currentPage = 'home';
 
   final TextEditingController _textController = TextEditingController();
   bool    _isRecording  = false;
@@ -35,9 +36,6 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
     super.dispose();
   }
 
-  // ─────────────────────────────────────────
-  // NAVIGATION
-  // ─────────────────────────────────────────
   void _goBack() {
     if (_currentPage != 'home') {
       setState(() {
@@ -56,12 +54,9 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
     }
   }
 
-  // ─────────────────────────────────────────
-  // REAL MIC RECORDING + ASR TRANSCRIBE API
-  // ─────────────────────────────────────────
   Future<void> _toggleRecording() async {
     if (_isRecording) {
-      // Stop recording and transcribe
+      // ── STOP ──────────────────────────────────────
       final path = await _recorder.stop();
       setState(() {
         _isRecording  = false;
@@ -78,19 +73,33 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
       }
 
       try {
-        final file    = File(path);
-        final request = http.MultipartRequest('POST', Uri.parse(_asrEndpoint));
-        request.files.add(
-          await http.MultipartFile.fromPath('audio', file.path),
+        final request = http.MultipartRequest(
+          'POST',
+          Uri.parse(_asrEndpoint),
         );
+
+        if (kIsWeb) {
+          // Web: recorder returns a blob URL — convert to bytes
+          final bytes = await fetchBlobBytes(path);
+          request.files.add(http.MultipartFile.fromBytes(
+            'audio',
+            bytes,
+            filename: 'recording.webm',
+          ));
+        } else {
+          // Android: recorder returns a real file path
+          request.files.add(
+            await http.MultipartFile.fromPath('audio', path),
+          );
+        }
 
         final streamed = await request.send()
             .timeout(const Duration(seconds: 60));
         final body = await http.Response.fromStream(streamed);
 
         if (body.statusCode == 200) {
-          final json       = jsonDecode(body.body);
-          final transcript = json['transcript'] as String;
+          final decoded    = jsonDecode(body.body);
+          final transcript = decoded['transcript'] as String;
           setState(() {
             _textController.text = transcript;
             _isProcessing        = false;
@@ -101,28 +110,35 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
             _errorText    = 'Server error ${body.statusCode}. Try again.';
           });
         }
-
-        if (await file.exists()) await file.delete();
       } catch (e) {
         setState(() {
           _isProcessing = false;
-          _errorText    = 'Connection error. Check your internet.';
+          _errorText    = 'Connection error: $e';
         });
       }
+
     } else {
-      // Start recording
+      // ── START ─────────────────────────────────────
       final hasPermission = await _recorder.hasPermission();
       if (!hasPermission) {
         setState(() => _errorText = 'Microphone permission denied.');
         return;
       }
 
-      final dir  = await getTemporaryDirectory();
-      final path =
-          '${dir.path}/rec_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      final String path;
+      if (kIsWeb) {
+        // Web: path is ignored by the record package (it uses a blob internally)
+        path = 'recording.webm';
+      } else {
+        // Android: needs a real writable path
+        final dir = await getTempDirPath();
+        path = '$dir/rec_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      }
 
       await _recorder.start(
-        const RecordConfig(encoder: AudioEncoder.aacLc),
+        RecordConfig(
+          encoder: kIsWeb ? AudioEncoder.opus : AudioEncoder.aacLc,
+        ),
         path: path,
       );
 
@@ -134,9 +150,6 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
     }
   }
 
-  // ─────────────────────────────────────────
-  // TRANSLATE TO SIGN VIA ApiService
-  // ─────────────────────────────────────────
   Future<void> _translateToSign() async {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
@@ -147,7 +160,6 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
     });
 
     final result = await ApiService.createGeneration(text);
-
     if (!mounted) return;
     setState(() => _isProcessing = false);
 
@@ -163,43 +175,40 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
       );
     } else {
       setState(() {
-        _errorText = result['data']['message'] ?? 'An error occurred. Try again.';
+        _errorText =
+            result['data']['message'] ?? 'An error occurred. Try again.';
       });
     }
   }
 
   // ─────────────────────────────────────────
-  // HEADER
+  // WIDGETS
   // ─────────────────────────────────────────
+
   Widget _buildHeader(String subtitle) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              GestureDetector(
-                onTap: _goBack,
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0EFF8),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.arrow_back_ios_new_rounded,
-                      size: 16, color: Color(0xFF5B4FCF)),
+          Row(children: [
+            GestureDetector(
+              onTap: _goBack,
+              child: Container(
+                width: 36, height: 36,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0EFF8),
+                  borderRadius: BorderRadius.circular(10),
                 ),
+                child: const Icon(Icons.arrow_back_ios_new_rounded,
+                    size: 16, color: Color(0xFF5B4FCF)),
               ),
-              const SizedBox(width: 12),
-              const Text('Text to Sign',
-                  style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A1A2E))),
-            ],
-          ),
+            ),
+            const SizedBox(width: 12),
+            const Text('Text to Sign',
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A1A2E))),
+          ]),
           const SizedBox(height: 4),
           Padding(
             padding: const EdgeInsets.only(left: 48),
@@ -211,9 +220,6 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
     );
   }
 
-  // ─────────────────────────────────────────
-  // PAGE HOME
-  // ─────────────────────────────────────────
   Widget _buildHomePage() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -223,148 +229,114 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              children: [
-                // Type Text card
-                GestureDetector(
-                  onTap: () => setState(() => _currentPage = 'text'),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF7B6EF6), Color(0xFF5B4FCF)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+            child: Column(children: [
+              // ── Type card ──
+              GestureDetector(
+                onTap: () => setState(() => _currentPage = 'text'),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF7B6EF6), Color(0xFF5B4FCF)],
+                      begin: Alignment.topLeft, end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(22),
+                    boxShadow: [BoxShadow(
+                      color: const Color(0xFF5B4FCF).withValues(alpha: 0.35),
+                      blurRadius: 20, offset: const Offset(0, 8),
+                    )],
+                  ),
+                  child: Row(children: [
+                    Container(
+                      width: 56, height: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      borderRadius: BorderRadius.circular(22),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF5B4FCF).withValues(alpha: 0.35),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        )
-                      ],
+                      child: const Icon(Icons.keyboard_rounded,
+                          color: Colors.white, size: 30),
                     ),
-                    child: Row(
+                    const SizedBox(width: 18),
+                    const Expanded(child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 56,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: const Icon(Icons.keyboard_rounded,
-                              color: Colors.white, size: 30),
-                        ),
-                        const SizedBox(width: 18),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Type a Message',
-                                  style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white)),
-                              SizedBox(height: 6),
-                              Text('Write your text manually',
-                                  style: TextStyle(
-                                      fontSize: 13, color: Colors.white70)),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.arrow_forward_rounded,
-                              color: Colors.white, size: 18),
-                        ),
+                        Text('Type a Message', style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold,
+                            color: Colors.white)),
+                        SizedBox(height: 6),
+                        Text('Write your text manually',
+                            style: TextStyle(fontSize: 13, color: Colors.white70)),
                       ],
+                    )),
+                    Container(
+                      width: 36, height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.arrow_forward_rounded,
+                          color: Colors.white, size: 18),
                     ),
-                  ),
+                  ]),
                 ),
-
-                const SizedBox(height: 16),
-
-                // Voice card
-                GestureDetector(
-                  onTap: () => setState(() => _currentPage = 'voice'),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(
-                          color: const Color(0xFFE0DEFF), width: 1.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 14,
-                          offset: const Offset(0, 4),
-                        )
-                      ],
+              ),
+              const SizedBox(height: 16),
+              // ── Voice card ──
+              GestureDetector(
+                onTap: () => setState(() => _currentPage = 'voice'),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: const Color(0xFFE0DEFF), width: 1.5),
+                    boxShadow: [BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 14, offset: const Offset(0, 4),
+                    )],
+                  ),
+                  child: Row(children: [
+                    Container(
+                      width: 56, height: 56,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0EFF8),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(Icons.mic_rounded,
+                          color: Color(0xFF5B4FCF), size: 30),
                     ),
-                    child: Row(
+                    const SizedBox(width: 18),
+                    const Expanded(child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 56,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF0EFF8),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: const Icon(Icons.mic_rounded,
-                              color: Color(0xFF5B4FCF), size: 30),
-                        ),
-                        const SizedBox(width: 18),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Voice Recording',
-                                  style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF1A1A2E))),
-                              SizedBox(height: 6),
-                              Text('Speak and let AI transcribe',
-                                  style: TextStyle(
-                                      fontSize: 13, color: Colors.grey)),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFF0EFF8),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.arrow_forward_rounded,
-                              color: Color(0xFF5B4FCF), size: 18),
-                        ),
+                        Text('Voice Recording', style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold,
+                            color: Color(0xFF1A1A2E))),
+                        SizedBox(height: 6),
+                        Text('Speak and let AI transcribe',
+                            style: TextStyle(fontSize: 13, color: Colors.grey)),
                       ],
+                    )),
+                    Container(
+                      width: 36, height: 36,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF0EFF8), shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.arrow_forward_rounded,
+                          color: Color(0xFF5B4FCF), size: 18),
                     ),
-                  ),
+                  ]),
                 ),
-              ],
-            ),
+              ),
+            ]),
           ),
         ),
       ],
     );
   }
 
-  // ─────────────────────────────────────────
-  // PAGE TEXT
-  // ─────────────────────────────────────────
   Widget _buildTextPage() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -374,177 +346,131 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              children: [
-
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 14,
-                          offset: const Offset(0, 4),
-                        )
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(Icons.edit_rounded,
-                                size: 14, color: Color(0xFF5B4FCF)),
-                            SizedBox(width: 6),
-                            Text('Your message',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF5B4FCF))),
-                          ],
+            child: Column(children: [
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 14, offset: const Offset(0, 4),
+                    )],
+                  ),
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(children: [
+                        Icon(Icons.edit_rounded, size: 14,
+                            color: Color(0xFF5B4FCF)),
+                        SizedBox(width: 6),
+                        Text('Your message', style: TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w600,
+                            color: Color(0xFF5B4FCF))),
+                      ]),
+                      const SizedBox(height: 12),
+                      Expanded(child: TextField(
+                        controller: _textController,
+                        maxLines: null, expands: true,
+                        autofocus: true,
+                        textAlignVertical: TextAlignVertical.top,
+                        style: const TextStyle(fontSize: 17,
+                            color: Color(0xFF1A1A2E), height: 1.6),
+                        decoration: const InputDecoration(
+                          hintText: 'Type here...',
+                          hintStyle: TextStyle(color: Colors.grey, fontSize: 17),
+                          border: InputBorder.none,
                         ),
-                        const SizedBox(height: 12),
-                        Expanded(
-                          child: TextField(
-                            controller: _textController,
-                            maxLines: null,
-                            expands: true,
-                            autofocus: true,
-                            textAlignVertical: TextAlignVertical.top,
-                            style: const TextStyle(
-                              fontSize: 17,
-                              color: Color(0xFF1A1A2E),
-                              height: 1.6,
-                            ),
-                            decoration: const InputDecoration(
-                              hintText: 'Type here...',
-                              hintStyle:
-                                  TextStyle(color: Colors.grey, fontSize: 17),
-                              border: InputBorder.none,
-                            ),
+                      )),
+                      const Divider(color: Color(0xFFF0EFF8)),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          GestureDetector(
+                            onTap: () => _textController.clear(),
+                            child: const Row(children: [
+                              Icon(Icons.close_rounded, size: 14,
+                                  color: Colors.grey),
+                              SizedBox(width: 4),
+                              Text('Clear', style: TextStyle(
+                                  fontSize: 12, color: Colors.grey)),
+                            ]),
                           ),
-                        ),
-                        const Divider(color: Color(0xFFF0EFF8)),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            GestureDetector(
-                              onTap: () => _textController.clear(),
-                              child: const Row(
-                                children: [
-                                  Icon(Icons.close_rounded,
-                                      size: 14, color: Colors.grey),
-                                  SizedBox(width: 4),
-                                  Text('Clear',
-                                      style: TextStyle(
-                                          fontSize: 12, color: Colors.grey)),
-                                ],
-                              ),
-                            ),
-                            ValueListenableBuilder<TextEditingValue>(
-                              valueListenable: _textController,
-                              builder: (_, v, __) => Text(
-                                '${v.text.length} chars',
+                          ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: _textController,
+                            builder: (_, v, __) => Text('${v.text.length} chars',
                                 style: const TextStyle(
-                                    fontSize: 11, color: Colors.grey),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Error message
-                if (_errorText != null) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.red.shade200),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.error_outline,
-                            color: Colors.red.shade400, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(_errorText!,
-                              style: TextStyle(
-                                  color: Colors.red.shade700, fontSize: 13)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: 20),
-
-                // Translate button
-                GestureDetector(
-                  onTap: _isProcessing ? null : _translateToSign,
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF7B6EF6), Color(0xFF5B4FCF)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF5B4FCF).withValues(alpha: 0.35),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
-                        )
-                      ],
-                    ),
-                    child: _isProcessing
-                        ? const Center(
-                            child: SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                  color: Colors.white, strokeWidth: 2.5),
-                            ),
-                          )
-                        : const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.sign_language_rounded,
-                                  color: Colors.white, size: 22),
-                              SizedBox(width: 10),
-                              Text('Translate to Sign',
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white)),
-                            ],
+                                    fontSize: 11, color: Colors.grey)),
                           ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 24),
+              ),
+              if (_errorText != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Row(children: [
+                    Icon(Icons.error_outline,
+                        color: Colors.red.shade400, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(_errorText!,
+                        style: TextStyle(
+                            color: Colors.red.shade700, fontSize: 13))),
+                  ]),
+                ),
               ],
-            ),
+              const SizedBox(height: 20),
+              GestureDetector(
+                onTap: _isProcessing ? null : _translateToSign,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF7B6EF6), Color(0xFF5B4FCF)],
+                      begin: Alignment.topLeft, end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [BoxShadow(
+                      color: const Color(0xFF5B4FCF).withValues(alpha: 0.35),
+                      blurRadius: 16, offset: const Offset(0, 6),
+                    )],
+                  ),
+                  child: _isProcessing
+                      ? const Center(child: SizedBox(width: 24, height: 24,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2.5)))
+                      : const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.sign_language_rounded,
+                                color: Colors.white, size: 22),
+                            SizedBox(width: 10),
+                            Text('Translate to Sign', style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold,
+                                color: Colors.white)),
+                          ]),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ]),
           ),
         ),
       ],
     );
   }
 
-  // ─────────────────────────────────────────
-  // PAGE VOICE
-  // ─────────────────────────────────────────
   Widget _buildVoicePage() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -554,217 +480,173 @@ class _TextToSignScreenState extends State<TextToSignScreen> {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              children: [
-
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(22),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 14,
-                          offset: const Offset(0, 4),
-                        )
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Mic button with ripple
-                        GestureDetector(
-                          onTap: _isProcessing ? null : _toggleRecording,
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              if (_isRecording) ...[
-                                _buildRipple(140, Colors.red.withValues(alpha: 0.08)),
-                                _buildRipple(110, Colors.red.withValues(alpha: 0.12)),
-                              ],
-                              Container(
-                                width: 88,
-                                height: 88,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: _isRecording
-                                      ? Colors.red
-                                      : const Color(0xFF5B4FCF),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: (_isRecording
-                                              ? Colors.red
-                                              : const Color(0xFF5B4FCF))
-                                          .withValues(alpha: 0.4),
-                                      blurRadius: 24,
-                                      offset: const Offset(0, 8),
-                                    )
-                                  ],
-                                ),
-                                child: Icon(
-                                  _isRecording
-                                      ? Icons.stop_rounded
-                                      : Icons.mic_rounded,
-                                  color: Colors.white,
-                                  size: 40,
-                                ),
-                              ),
+            child: Column(children: [
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(22),
+                    boxShadow: [BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 14, offset: const Offset(0, 4),
+                    )],
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      GestureDetector(
+                        onTap: _isProcessing ? null : _toggleRecording,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            if (_isRecording) ...[
+                              _buildRipple(140,
+                                  Colors.red.withValues(alpha: 0.08)),
+                              _buildRipple(110,
+                                  Colors.red.withValues(alpha: 0.12)),
                             ],
-                          ),
+                            Container(
+                              width: 88, height: 88,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: _isRecording
+                                    ? Colors.red : const Color(0xFF5B4FCF),
+                                boxShadow: [BoxShadow(
+                                  color: (_isRecording
+                                      ? Colors.red
+                                      : const Color(0xFF5B4FCF))
+                                      .withValues(alpha: 0.4),
+                                  blurRadius: 24, offset: const Offset(0, 8),
+                                )],
+                              ),
+                              child: Icon(
+                                _isRecording
+                                    ? Icons.stop_rounded : Icons.mic_rounded,
+                                color: Colors.white, size: 40,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 24),
-                        Text(
-                          _isRecording
-                              ? 'Recording...'
-                              : 'Tap to start recording',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: _isRecording
-                                ? Colors.red
-                                : const Color(0xFF1A1A2E),
-                          ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        _isRecording
+                            ? 'Recording...' : 'Tap to start recording',
+                        style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w600,
+                          color: _isRecording
+                              ? Colors.red : const Color(0xFF1A1A2E),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _isRecording
-                              ? 'Tap again to stop'
-                              : 'Your voice will be converted to text',
-                          style:
-                              const TextStyle(fontSize: 13, color: Colors.grey),
-                        ),
-
-                        // Processing indicator
-                        if (_isProcessing && !_isRecording) ...[
-                          const SizedBox(height: 28),
-                          const CircularProgressIndicator(
-                              color: Color(0xFF5B4FCF)),
-                          const SizedBox(height: 10),
-                          const Text('Transcribing your voice...',
-                              style:
-                                  TextStyle(fontSize: 13, color: Colors.grey)),
-                        ],
-
-                        // Error
-                        if (_errorText != null && !_isProcessing) ...[
-                          const SizedBox(height: 16),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            child: Text(
-                              _errorText!,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _isRecording
+                            ? 'Tap again to stop'
+                            : 'Your voice will be converted to text',
+                        style: const TextStyle(fontSize: 13, color: Colors.grey),
+                      ),
+                      if (_isProcessing && !_isRecording) ...[
+                        const SizedBox(height: 28),
+                        const CircularProgressIndicator(
+                            color: Color(0xFF5B4FCF)),
+                        const SizedBox(height: 10),
+                        const Text('Transcribing your voice...',
+                            style: TextStyle(fontSize: 13, color: Colors.grey)),
+                      ],
+                      if (_errorText != null && !_isProcessing) ...[
+                        const SizedBox(height: 16),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Text(_errorText!,
                               textAlign: TextAlign.center,
                               style: const TextStyle(
-                                  fontSize: 13, color: Colors.red),
+                                  fontSize: 13, color: Colors.red)),
+                        ),
+                      ],
+                      if (!_isProcessing && !_isRecording &&
+                          _textController.text.isNotEmpty) ...[
+                        const SizedBox(height: 28),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0EFF8),
+                              borderRadius: BorderRadius.circular(14),
                             ),
-                          ),
-                        ],
-
-                        // Transcribed result
-                        if (!_isProcessing &&
-                            !_isRecording &&
-                            _textController.text.isNotEmpty) ...[
-                          const SizedBox(height: 28),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF0EFF8),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Row(
-                                    children: [
-                                      Icon(Icons.record_voice_over_rounded,
-                                          size: 14, color: Color(0xFF5B4FCF)),
-                                      SizedBox(width: 6),
-                                      Text('Transcribed',
-                                          style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w600,
-                                              color: Color(0xFF5B4FCF))),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    _textController.text,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Row(children: [
+                                  Icon(Icons.record_voice_over_rounded,
+                                      size: 14, color: Color(0xFF5B4FCF)),
+                                  SizedBox(width: 6),
+                                  Text('Transcribed', style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF5B4FCF))),
+                                ]),
+                                const SizedBox(height: 8),
+                                Text(_textController.text,
                                     style: const TextStyle(
                                         fontSize: 15,
                                         color: Color(0xFF1A1A2E),
-                                        height: 1.5),
-                                  ),
-                                ],
-                              ),
+                                        height: 1.5)),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              if (!_isRecording && !_isProcessing &&
+                  _textController.text.isNotEmpty)
+                GestureDetector(
+                  onTap: _translateToSign,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF7B6EF6), Color(0xFF5B4FCF)],
+                        begin: Alignment.topLeft, end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [BoxShadow(
+                        color: const Color(0xFF5B4FCF).withValues(alpha: 0.35),
+                        blurRadius: 16, offset: const Offset(0, 6),
+                      )],
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.sign_language_rounded,
+                            color: Colors.white, size: 22),
+                        SizedBox(width: 10),
+                        Text('Translate to Sign', style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold,
+                            color: Colors.white)),
                       ],
                     ),
                   ),
                 ),
-
-                const SizedBox(height: 20),
-
-                // Translate button
-                if (!_isRecording &&
-                    !_isProcessing &&
-                    _textController.text.isNotEmpty)
-                  GestureDetector(
-                    onTap: _translateToSign,
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF7B6EF6), Color(0xFF5B4FCF)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF5B4FCF).withValues(alpha: 0.35),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
-                          )
-                        ],
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.sign_language_rounded,
-                              color: Colors.white, size: 22),
-                          SizedBox(width: 10),
-                          Text('Translate to Sign',
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white)),
-                        ],
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 24),
-              ],
-            ),
+              const SizedBox(height: 24),
+            ]),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildRipple(double size, Color color) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-    );
-  }
+  Widget _buildRipple(double size, Color color) => Container(
+    width: size, height: size,
+    decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+  );
 
   @override
   Widget build(BuildContext context) {
